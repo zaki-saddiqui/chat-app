@@ -17,9 +17,12 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [error, setError] = useState("")
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query)
+    setError("")
+
     if (!query.trim()) {
       setSearchResults([])
       return
@@ -28,15 +31,41 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
     setIsLoading(true)
     try {
       const supabase = createClient()
-      const { data } = await supabase
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser()
+
+      if (!currentUser) {
+        setError("Not authenticated")
+        setIsLoading(false)
+        return
+      }
+
+      console.log("[v0] Searching for username:", query)
+
+      // Fetch all users and filter client-side to avoid RLS issues
+      const { data: allUsers, error: fetchError } = await supabase
         .from("users")
         .select("id, username, display_name, profile_picture_url")
-        .ilike("username", `%${query}%`)
-        .limit(10)
+        .neq("id", currentUser.id)
 
-      setSearchResults(data || [])
+      if (fetchError) {
+        console.error("[v0] Fetch error:", fetchError)
+        setError("Failed to search users")
+        setIsLoading(false)
+        return
+      }
+
+      console.log("[v0] All users fetched:", allUsers)
+
+      // Filter by username (case-insensitive)
+      const filtered = (allUsers || []).filter((user) => user.username.toLowerCase().includes(query.toLowerCase()))
+
+      console.log("[v0] Filtered results:", filtered)
+      setSearchResults(filtered)
     } catch (error) {
-      console.error("Search error:", error)
+      console.error("[v0] Search error:", error)
+      setError("Error searching users")
     } finally {
       setIsLoading(false)
     }
@@ -78,7 +107,8 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
       onChatCreated()
       onClose()
     } catch (error) {
-      console.error("Error creating chat:", error)
+      console.error("[v0] Error creating chat:", error)
+      setError("Failed to create chat")
     } finally {
       setIsCreating(false)
     }
@@ -101,10 +131,14 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
             autoFocus
           />
 
+          {error && <p className="text-sm text-red-500 text-center py-2">{error}</p>}
+
           <div className="max-h-64 overflow-y-auto space-y-2">
             {searchResults.length === 0 && searchQuery && !isLoading && (
               <p className="text-sm text-muted-foreground text-center py-4">No users found</p>
             )}
+
+            {isLoading && <p className="text-sm text-muted-foreground text-center py-4">Searching...</p>}
 
             {searchResults.map((user) => (
               <div

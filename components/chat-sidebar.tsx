@@ -89,7 +89,7 @@ export function ChatSidebar() {
       {/* Header */}
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h1 className="text-2xl font-bold">Messages</h1>
-        <Link href="/chat/settings">
+        <Link href="/chat/profile">
           <Button size="icon" variant="ghost" className="rounded-full">
             <Settings className="w-5 h-5" />
           </Button>

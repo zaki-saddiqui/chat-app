@@ -46,16 +46,25 @@ export default function ProfilePage() {
         return
       }
 
-      const { data: userProfile } = await supabase.from("users").select("*").eq("id", user.id).single()
+      console.log("[v0] Fetching profile for user ID:", user.id)
+
+      const { data: userProfile, error } = await supabase.from("users").select("*").eq("id", user.id).single()
+
+      if (error) {
+        console.error("[v0] Error fetching profile:", error)
+        setError(`Failed to load profile: ${error.message}`)
+        return
+      }
 
       if (userProfile) {
+        console.log("[v0] Profile loaded successfully:", userProfile)
         setProfile(userProfile)
         setDisplayName(userProfile.display_name)
         setUsername(userProfile.username)
         setProfilePictureUrl(userProfile.profile_picture_url || "")
       }
     } catch (err) {
-      console.error("Error loading profile:", err)
+      console.error("[v0] Exception loading profile:", err)
       setError("Failed to load profile")
     }
   }

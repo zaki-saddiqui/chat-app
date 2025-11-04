@@ -7,6 +7,7 @@ import { NewChatModal } from "./new-chat-modal"
 import { Button } from "@/components/ui/button"
 import { Plus, Settings } from "lucide-react"
 import Link from "next/link"
+import { fetchUserConversations, fetchUserById } from "@/lib/supabase/queries"
 
 interface ChatListItem {
   conversationId: string
@@ -36,34 +37,19 @@ export function ChatSidebar() {
 
       if (!user) return
 
-      const { data: conversations } = await supabase
-        .from("conversations")
-        .select(`
-          id,
-          user1_id,
-          user2_id,
-          messages (
-            id,
-            content,
-            created_at,
-            sender_id
-          )
-        `)
-        .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-        .order("updated_at", { ascending: false })
+      const conversations = await fetchUserConversations(user.id)
 
-      if (!conversations) return
+      if (!conversations || conversations.length === 0) {
+        setChats([])
+        return
+      }
 
       const chatList: ChatListItem[] = []
 
       for (const conv of conversations) {
         const otherUserId = conv.user1_id === user.id ? conv.user2_id : conv.user1_id
 
-        const { data: otherUser } = await supabase
-          .from("users")
-          .select("username, display_name, profile_picture_url")
-          .eq("id", otherUserId)
-          .single()
+        const otherUser = await fetchUserById(otherUserId)
 
         const lastMsg = conv.messages?.[0]
 
@@ -80,7 +66,7 @@ export function ChatSidebar() {
 
       setChats(chatList)
     } catch (error) {
-      console.error("Error fetching chats:", error)
+      console.error("[v0] Error in fetchChats:", error)
     }
   }
 

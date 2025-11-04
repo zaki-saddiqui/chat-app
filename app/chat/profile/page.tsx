@@ -48,21 +48,43 @@ export default function ProfilePage() {
 
       console.log("[v0] Fetching profile for user ID:", user.id)
 
-      const { data: userProfile, error } = await supabase.from("users").select("*").eq("id", user.id).single()
+      let { data: userProfile, error } = await supabase.from("users").select("*").eq("id", user.id)
 
-      if (error) {
+      if (error && error.code !== "PGRST116") {
         console.error("[v0] Error fetching profile:", error)
         setError(`Failed to load profile: ${error.message}`)
         return
       }
 
-      if (userProfile) {
-        console.log("[v0] Profile loaded successfully:", userProfile)
-        setProfile(userProfile)
-        setDisplayName(userProfile.display_name)
-        setUsername(userProfile.username)
-        setProfilePictureUrl(userProfile.profile_picture_url || "")
+      // If profile doesn't exist, create it
+      if (!userProfile || userProfile.length === 0) {
+        console.log("[v0] Profile doesn't exist, creating new profile")
+        const email = user.email || "User"
+        const newProfile = {
+          id: user.id,
+          username: user.user_metadata?.username || email.split("@")[0],
+          display_name: user.user_metadata?.display_name || email,
+          profile_picture_url: null,
+          theme_preference: "light",
+        }
+
+        const { error: createError } = await supabase.from("users").insert([newProfile])
+
+        if (createError) {
+          console.error("[v0] Error creating profile:", createError)
+          setError(`Failed to create profile: ${createError.message}`)
+          return
+        }
+
+        userProfile = [newProfile]
       }
+
+      const profile = userProfile[0]
+      console.log("[v0] Profile loaded successfully:", profile)
+      setProfile(profile)
+      setDisplayName(profile.display_name)
+      setUsername(profile.username)
+      setProfilePictureUrl(profile.profile_picture_url || "")
     } catch (err) {
       console.error("[v0] Exception loading profile:", err)
       setError("Failed to load profile")

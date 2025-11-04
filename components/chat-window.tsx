@@ -162,7 +162,7 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
               className={`max-w-xs px-4 py-2 rounded-2xl ${
                 msg.sender_id === currentUserId
                   ? "bg-primary text-primary-foreground rounded-br-none"
-                  : "bg-secondary text-secondary-foreground rounded-bl-none"
+                  : "bg-muted text-muted-foreground rounded-bl-none"
               }`}
             >
               {msg.message_type === "text" ? (
@@ -189,10 +189,10 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
       {/* Message Input */}
       <div className="px-6 py-4 border-t border-border">
         <form onSubmit={handleSendMessage} className="flex items-center gap-3">
-          <Button type="button" size="icon" variant="ghost" className="rounded-full">
+          <Button type="button" size="icon" variant="ghost" className="rounded-full cursor-pointer">
             <ImageIcon className="w-5 h-5" />
           </Button>
-          <Button type="button" size="icon" variant="ghost" className="rounded-full">
+          <Button type="button" size="icon" variant="ghost" className="rounded-full cursor-pointer">
             <FileIcon className="w-5 h-5" />
           </Button>
           <Input
@@ -202,7 +202,12 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
             className="rounded-full border-input h-10"
             disabled={!currentUserId}
           />
-          <Button type="submit" size="icon" disabled={!newMessage.trim() || !currentUserId} className="rounded-full">
+          <Button
+            type="submit"
+            size="icon"
+            disabled={!newMessage.trim() || !currentUserId}
+            className="rounded-full cursor-pointer"
+          >
             <Send className="w-5 h-5" />
           </Button>
         </form>

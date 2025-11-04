@@ -41,7 +41,7 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
         return
       }
 
-      console.log("[v0] Searching for username:", query)
+      console.log("[v0] Searching for username:", query, "Current user ID:", currentUser.id)
 
       // Fetch all users and filter client-side to avoid RLS issues
       const { data: allUsers, error: fetchError } = await supabase
@@ -73,42 +73,63 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
 
   const handleStartChat = async (userId: string) => {
     setIsCreating(true)
+    setError("")
     try {
       const supabase = createClient()
       const {
         data: { user: currentUser },
       } = await supabase.auth.getUser()
 
-      if (!currentUser) return
+      if (!currentUser) {
+        setError("Authentication lost")
+        return
+      }
 
       const user1_id = currentUser.id < userId ? currentUser.id : userId
       const user2_id = currentUser.id < userId ? userId : currentUser.id
 
-      // Create or get conversation
-      const { data: existingConv } = await supabase
+      console.log("[v0] Creating chat between", user1_id, "and", user2_id)
+      console.log("[v0] Current user ID:", currentUser.id)
+      console.log("[v0] Other user ID:", userId)
+
+      const { data: existingConv1, error: err1 } = await supabase
         .from("conversations")
         .select("id")
         .eq("user1_id", user1_id)
         .eq("user2_id", user2_id)
-        .single()
+
+      if (err1) {
+        console.error("[v0] Error checking existing conversation:", err1)
+      }
+
+      const existingConv = existingConv1 && existingConv1.length > 0 ? existingConv1[0] : null
 
       if (existingConv) {
+        console.log("[v0] Conversation already exists:", existingConv.id)
         onChatCreated()
         onClose()
         return
       }
 
-      const { error } = await supabase.from("conversations").insert({
+      console.log("[v0] Inserting new conversation with user1_id:", user1_id, "user2_id:", user2_id)
+
+      const { error: insertError } = await supabase.from("conversations").insert({
         user1_id,
         user2_id,
       })
 
-      if (error) throw error
+      if (insertError) {
+        console.error("[v0] Insert error details:", insertError)
+        throw insertError
+      }
+
+      console.log("[v0] Chat created successfully")
       onChatCreated()
       onClose()
-    } catch (error) {
+    } catch (error: any) {
       console.error("[v0] Error creating chat:", error)
-      setError("Failed to create chat")
+      const errorMsg = error?.message || "Failed to create chat"
+      setError(errorMsg)
     } finally {
       setIsCreating(false)
     }

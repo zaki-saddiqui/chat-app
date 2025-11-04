@@ -141,13 +141,16 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
 
     try {
       const supabase = createClient()
-      const { data, error } = await supabase.from("messages").insert({
-        conversation_id: conversationId,
-        sender_id: currentUserId,
-        receiver_id: recipientId,
-        message_type: "text",
-        content: messageText,
-      })
+      const { data, error } = await supabase
+        .from("messages")
+        .insert({
+          conversation_id: conversationId,
+          sender_id: currentUserId,
+          receiver_id: recipientId,
+          message_type: "text",
+          content: messageText,
+        })
+        .select() // Added .select() to return the inserted message data
 
       if (error) throw error
 

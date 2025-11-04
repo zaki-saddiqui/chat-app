@@ -32,6 +32,7 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const subscriptionRef = useRef<any>(null)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null) // Added polling ref
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -94,9 +95,32 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
         console.log("[v0] Subscription status:", status)
       })
 
+    // This helps if Realtime is not enabled in Supabase
+    pollingIntervalRef.current = setInterval(async () => {
+      const supabaseClient = createClient()
+      const { data } = await supabaseClient
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", conversationId)
+        .order("created_at", { ascending: true })
+
+      if (data) {
+        setMessages((prev) => {
+          // Only update if there are new messages
+          if (data.length > prev.length) {
+            return data
+          }
+          return prev
+        })
+      }
+    }, 2000)
+
     return () => {
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe()
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
       }
     }
   }, [conversationId])
@@ -150,13 +174,22 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
           message_type: "text",
           content: messageText,
         })
-        .select() // Added .select() to return the inserted message data
+        .select()
 
       if (error) throw error
 
       console.log("[v0] Message sent successfully:", data)
 
-      setMessages((prev) => prev.filter((m) => m.id !== tempId))
+      // The real-time subscription will add the real message, and we deduplicate by ID
+      if (data && data[0]) {
+        const realMessage = data[0] as Message
+        setMessages(
+          (prev) =>
+            prev
+              .filter((m) => m.id !== tempId) // Remove optimistic message
+              .map((m) => (m.id === tempId ? realMessage : m)), // Replace if somehow still there
+        )
+      }
     } catch (error) {
       console.error("[v0] Error sending message:", error)
       setMessages((prev) => prev.filter((m) => m.id !== tempId))

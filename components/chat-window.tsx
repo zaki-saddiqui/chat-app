@@ -31,6 +31,7 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
   const [isLoading, setIsLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const subscriptionRef = useRef<any>(null)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -64,11 +65,11 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
     fetchData()
   }, [conversationId])
 
-  // Subscribe to real-time messages
   useEffect(() => {
     const supabase = createClient()
 
-    const channel = supabase
+    // Subscribe to real-time changes
+    subscriptionRef.current = supabase
       .channel(`messages:${conversationId}`)
       .on(
         "postgres_changes",
@@ -79,13 +80,24 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message])
+          console.log("[v0] New message received via realtime:", payload.new)
+          const newMsg = payload.new as Message
+          setMessages((prev) => {
+            // Check if message already exists to avoid duplicates
+            const exists = prev.some((m) => m.id === newMsg.id)
+            if (exists) return prev
+            return [...prev, newMsg]
+          })
         },
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log("[v0] Subscription status:", status)
+      })
 
     return () => {
-      channel.unsubscribe()
+      if (subscriptionRef.current) {
+        subscriptionRef.current.unsubscribe()
+      }
     }
   }, [conversationId])
 
@@ -113,22 +125,39 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
     e.preventDefault()
     if (!newMessage.trim() || !currentUserId) return
 
+    const tempId = `temp-${Date.now()}`
+    const optimisticMessage: Message = {
+      id: tempId,
+      sender_id: currentUserId,
+      content: newMessage,
+      message_type: "text",
+      created_at: new Date().toISOString(),
+    }
+
+    setMessages((prev) => [...prev, optimisticMessage])
+    const messageText = newMessage
+    setNewMessage("")
+    localStorage.removeItem(`chat-draft-${conversationId}`)
+
     try {
       const supabase = createClient()
-      const { error } = await supabase.from("messages").insert({
+      const { data, error } = await supabase.from("messages").insert({
         conversation_id: conversationId,
         sender_id: currentUserId,
         receiver_id: recipientId,
         message_type: "text",
-        content: newMessage,
+        content: messageText,
       })
 
       if (error) throw error
 
-      setNewMessage("")
-      localStorage.removeItem(`chat-draft-${conversationId}`)
+      console.log("[v0] Message sent successfully:", data)
+
+      setMessages((prev) => prev.filter((m) => m.id !== tempId))
     } catch (error) {
-      console.error("Error sending message:", error)
+      console.error("[v0] Error sending message:", error)
+      setMessages((prev) => prev.filter((m) => m.id !== tempId))
+      setNewMessage(messageText)
     }
   }
 

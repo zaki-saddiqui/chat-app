@@ -132,46 +132,53 @@ interface ChatListItem {
 export const ChatSidebar = memo(function ChatSidebar() {
   const [chats, setChats] = useState<ChatListItem[]>([])
   const [isNewChatOpen, setIsNewChatOpen] = useState(false)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchChats()
   }, [])
 
   useEffect(() => {
-    const supabase = createClient()
-    const {
-      data: { user },
-    } = supabase.auth.getUser()
+    const setupSubscription = async () => {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-    if (!user) return
+      if (!user) return
 
-    const channel = supabase
-      .channel(`messages-${user.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-        },
-        async (payload: any) => {
-          const message = payload.new
-          const isReceiver = message.receiver_id === user.id
+      setCurrentUserId(user.id)
 
-          if (isReceiver) {
-            // Restore conversation if it was deleted by current user
-            const restored = await restoreConversationIfDeleted(message.conversation_id, user.id)
-            if (restored || !chats.find((c) => c.conversationId === message.conversation_id)) {
-              fetchChats()
+      const channel = supabase
+        .channel(`messages-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+          },
+          async (payload: any) => {
+            const message = payload.new
+            const isReceiver = message.receiver_id === user.id
+
+            if (isReceiver) {
+              // Restore conversation if it was deleted by current user
+              const restored = await restoreConversationIfDeleted(message.conversation_id, user.id)
+              if (restored || !chats.find((c) => c.conversationId === message.conversation_id)) {
+                fetchChats()
+              }
             }
-          }
-        },
-      )
-      .subscribe()
+          },
+        )
+        .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
+      return () => {
+        supabase.removeChannel(channel)
+      }
     }
+
+    setupSubscription()
   }, [chats])
 
   const fetchChats = useCallback(async () => {

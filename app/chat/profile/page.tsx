@@ -46,7 +46,7 @@ export default function ProfilePage() {
         return
       }
 
-      console.log("[v0] Fetching profile for user ID:", user.id)
+      // console.log("Fetching profile for user ID:", user.id)
 
       let { data: userProfile, error } = await supabase.from("users").select("*").eq("id", user.id)
 
@@ -71,7 +71,7 @@ export default function ProfilePage() {
         const { error: createError } = await supabase.from("users").insert([newProfile])
 
         if (createError) {
-          console.error("[v0] Error creating profile:", createError)
+          console.error("Error creating profile:", createError)
           setError(`Failed to create profile: ${createError.message}`)
           return
         }
@@ -80,13 +80,13 @@ export default function ProfilePage() {
       }
 
       const profile = userProfile[0]
-      console.log("[v0] Profile loaded successfully:", profile)
+      // console.log("Profile loaded successfully:", profile)
       setProfile(profile)
       setDisplayName(profile.display_name)
       setUsername(profile.username)
       setProfilePictureUrl(profile.profile_picture_url || "")
     } catch (err) {
-      console.error("[v0] Exception loading profile:", err)
+      console.error("Exception loading profile:", err)
       setError("Failed to load profile")
     }
   }

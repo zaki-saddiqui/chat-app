@@ -22,7 +22,6 @@
 // export function ChatSidebar() {
 //   const [chats, setChats] = useState<ChatListItem[]>([])
 //   const [isNewChatOpen, setIsNewChatOpen] = useState(false)
-//   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
 
 //   useEffect(() => {
 //     fetchChats()
@@ -76,7 +75,7 @@
 //       <div className="p-4 border-b border-border flex items-center justify-between">
 //         <h1 className="text-2xl font-bold">Messages</h1>
 //         <Link href="/chat/profile">
-//           <Button size="icon" variant="ghost" className="rounded-full">
+//           <Button size="icon" variant="ghost" className="rounded-full cursor-pointer">
 //             <Settings className="w-5 h-5" />
 //           </Button>
 //         </Link>
@@ -90,20 +89,13 @@
 //             <p className="text-sm mt-1">Start a new conversation</p>
 //           </div>
 //         ) : (
-//           chats.map((chat) => (
-//             <ChatItem
-//               key={chat.conversationId}
-//               chat={chat}
-//               isSelected={selectedChatId === chat.conversationId}
-//               onSelect={setSelectedChatId}
-//             />
-//           ))
+//           chats.map((chat) => <ChatItem key={chat.conversationId} chat={chat} />)
 //         )}
 //       </div>
 
 //       {/* New Chat Button */}
 //       <div className="p-4 border-t border-border">
-//         <Button onClick={() => setIsNewChatOpen(true)} className="w-full rounded-full h-12 gap-2">
+//         <Button onClick={() => setIsNewChatOpen(true)} className="w-full rounded-full h-12 gap-2 cursor-pointer">
 //           <Plus className="w-5 h-5" />
 //           New Chat
 //         </Button>
@@ -116,17 +108,16 @@
 // }
 
 
-
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback, memo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { ChatItem } from "./chat-item"
 import { NewChatModal } from "./new-chat-modal"
 import { Button } from "@/components/ui/button"
 import { Plus, Settings } from "lucide-react"
 import Link from "next/link"
-import { fetchUserConversations, fetchUserById } from "@/lib/supabase/queries"
+import { fetchUserConversations, fetchUserById, restoreConversationIfDeleted } from "@/lib/supabase/queries"
 
 interface ChatListItem {
   conversationId: string
@@ -138,7 +129,7 @@ interface ChatListItem {
   lastMessageTime?: string
 }
 
-export function ChatSidebar() {
+export const ChatSidebar = memo(function ChatSidebar() {
   const [chats, setChats] = useState<ChatListItem[]>([])
   const [isNewChatOpen, setIsNewChatOpen] = useState(false)
 
@@ -146,7 +137,44 @@ export function ChatSidebar() {
     fetchChats()
   }, [])
 
-  const fetchChats = async () => {
+  useEffect(() => {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = supabase.auth.getUser()
+
+    if (!user) return
+
+    const channel = supabase
+      .channel(`messages-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        async (payload: any) => {
+          const message = payload.new
+          const isReceiver = message.receiver_id === user.id
+
+          if (isReceiver) {
+            // Restore conversation if it was deleted by current user
+            const restored = await restoreConversationIfDeleted(message.conversation_id, user.id)
+            if (restored || !chats.find((c) => c.conversationId === message.conversation_id)) {
+              fetchChats()
+            }
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [chats])
+
+  const fetchChats = useCallback(async () => {
     try {
       const supabase = createClient()
       const {
@@ -186,7 +214,11 @@ export function ChatSidebar() {
     } catch (error) {
       console.error("[v0] Error in fetchChats:", error)
     }
-  }
+  }, [])
+
+  const handleChatDeleted = useCallback(() => {
+    fetchChats()
+  }, [fetchChats])
 
   return (
     <div className="w-full h-full flex flex-col bg-background border-r border-border">
@@ -208,7 +240,7 @@ export function ChatSidebar() {
             <p className="text-sm mt-1">Start a new conversation</p>
           </div>
         ) : (
-          chats.map((chat) => <ChatItem key={chat.conversationId} chat={chat} />)
+          chats.map((chat) => <ChatItem key={chat.conversationId} chat={chat} onDelete={handleChatDeleted} />)
         )}
       </div>
 
@@ -224,4 +256,4 @@ export function ChatSidebar() {
       {isNewChatOpen && <NewChatModal onClose={() => setIsNewChatOpen(false)} onChatCreated={fetchChats} />}
     </div>
   )
-}
+})

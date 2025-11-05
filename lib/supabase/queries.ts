@@ -59,7 +59,7 @@ export async function fetchUserConversations(userId: string) {
 
     return allConversations
   } catch (error) {
-    console.error("[v0] Error fetching conversations:", error)
+    console.error("Error fetching conversations:", error)
     return []
   }
 }
@@ -77,7 +77,7 @@ export async function fetchUserById(userId: string) {
     if (error) throw error
     return data
   } catch (error) {
-    console.error("[v0] Error fetching user:", error)
+    console.error("Error fetching user:", error)
     return null
   }
 }
@@ -102,7 +102,7 @@ export async function softDeleteConversation(conversationId: string, userId: str
     if (error) throw error
     return true
   } catch (error) {
-    console.error("[v0] Error deleting conversation:", error)
+    console.error("Error deleting conversation:", error)
     return false
   }
 }
@@ -131,7 +131,7 @@ export async function restoreConversationIfDeleted(conversationId: string, userI
     if (error) throw error
     return true
   } catch (error) {
-    console.error("[v0] Error restoring conversation:", error)
+    console.error("Error restoring conversation:", error)
     return false
   }
 }

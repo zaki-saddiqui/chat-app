@@ -364,7 +364,7 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => {
-          console.log("[v0] New message received via realtime:", payload.new)
+          // console.log("New message received via realtime:", payload.new)
           const newMsg = payload.new as Message
           setMessages((prev) => {
             // Check if message already exists to avoid duplicates
@@ -375,7 +375,7 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
         },
       )
       .subscribe((status) => {
-        console.log("[v0] Subscription status:", status)
+        // console.log("Subscription status:", status)
       })
 
     // This helps if Realtime is not enabled in Supabase
@@ -461,7 +461,7 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
 
       if (error) throw error
 
-      console.log("[v0] Message sent successfully:", data)
+      // console.log("Message sent successfully:", data)
 
       // The real-time subscription will add the real message, and we deduplicate by ID
       if (data && data[0]) {
@@ -474,7 +474,7 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
         )
       }
     } catch (error) {
-      console.error("[v0] Error sending message:", error)
+      console.error("Error sending message:", error)
       setMessages((prev) => prev.filter((m) => m.id !== tempId))
       setNewMessage(messageText)
     }

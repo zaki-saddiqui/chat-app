@@ -1,14 +1,7 @@
-"use client"
-
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-
-export default function Page() {
-  const router = useRouter()
-
-  useEffect(() => {
-    router.push("/chat")
-  }, [router])
-
-  return null
+export default function ChatPage() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <p>Select a chat to start messaging</p>
+    </div>
+  )
 }

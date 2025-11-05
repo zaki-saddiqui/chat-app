@@ -41,7 +41,7 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
         return
       }
 
-      console.log("[v0] Searching for username:", query, "Current user ID:", currentUser.id)
+      // console.log("Searching for username:", query, "Current user ID:", currentUser.id)
 
       // Fetch all users and filter client-side to avoid RLS issues
       const { data: allUsers, error: fetchError } = await supabase
@@ -50,21 +50,21 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
         .neq("id", currentUser.id)
 
       if (fetchError) {
-        console.error("[v0] Fetch error:", fetchError)
+        console.error("Fetch error:", fetchError)
         setError("Failed to search users")
         setIsLoading(false)
         return
       }
 
-      console.log("[v0] All users fetched:", allUsers)
+      // console.log("All users fetched:", allUsers)
 
       // Filter by username (case-insensitive)
       const filtered = (allUsers || []).filter((user) => user.username.toLowerCase().includes(query.toLowerCase()))
 
-      console.log("[v0] Filtered results:", filtered)
+      // console.log("Filtered results:", filtered)
       setSearchResults(filtered)
     } catch (error) {
-      console.error("[v0] Search error:", error)
+      console.error("Search error:", error)
       setError("Error searching users")
     } finally {
       setIsLoading(false)
@@ -88,9 +88,9 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
       const user1_id = currentUser.id < userId ? currentUser.id : userId
       const user2_id = currentUser.id < userId ? userId : currentUser.id
 
-      console.log("[v0] Creating chat between", user1_id, "and", user2_id)
-      console.log("[v0] Current user ID:", currentUser.id)
-      console.log("[v0] Other user ID:", userId)
+      // console.log(" Creating chat between", user1_id, "and", user2_id)
+      // console.log(" Current user ID:", currentUser.id)
+      // console.log(" Other user ID:", userId)
 
       const { data: existingConv1, error: err1 } = await supabase
         .from("conversations")
@@ -99,19 +99,19 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
         .eq("user2_id", user2_id)
 
       if (err1) {
-        console.error("[v0] Error checking existing conversation:", err1)
+        console.error(" Error checking existing conversation:", err1)
       }
 
       const existingConv = existingConv1 && existingConv1.length > 0 ? existingConv1[0] : null
 
       if (existingConv) {
-        console.log("[v0] Conversation already exists:", existingConv.id)
+        // console.log("Conversation already exists:", existingConv.id)
         onChatCreated()
         onClose()
         return
       }
 
-      console.log("[v0] Inserting new conversation with user1_id:", user1_id, "user2_id:", user2_id)
+      // console.log(" Inserting new conversation with user1_id:", user1_id, "user2_id:", user2_id)
 
       const { error: insertError } = await supabase.from("conversations").insert({
         user1_id,
@@ -119,15 +119,15 @@ export function NewChatModal({ onClose, onChatCreated }: NewChatModalProps) {
       })
 
       if (insertError) {
-        console.error("[v0] Insert error details:", insertError)
+        console.error(" Insert error details:", insertError)
         throw insertError
       }
 
-      console.log("[v0] Chat created successfully")
+      // console.log(" Chat created successfully")
       onChatCreated()
       onClose()
     } catch (error: any) {
-      console.error("[v0] Error creating chat:", error)
+      console.error(" Error creating chat:", error)
       const errorMsg = error?.message || "Failed to create chat"
       setError(errorMsg)
     } finally {

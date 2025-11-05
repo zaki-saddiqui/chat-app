@@ -1,7 +1,6 @@
-
 // "use client"
 
-// import { useEffect, useState } from "react"
+// import { useEffect, useState, useMemo } from "react"
 // import { useRouter, useParams } from "next/navigation"
 // import { createClient } from "@/lib/supabase/client"
 // import { ChatSidebar } from "@/components/chat-sidebar"
@@ -13,6 +12,8 @@
 //   const conversationId = params.conversationId as string
 //   const [recipientData, setRecipientData] = useState<any>(null)
 //   const [isLoading, setIsLoading] = useState(true)
+
+//   const memoizedConversationId = useMemo(() => conversationId, [conversationId])
 
 //   useEffect(() => {
 //     const loadConversation = async () => {
@@ -31,7 +32,7 @@
 //         const { data: conversation } = await supabase
 //           .from("conversations")
 //           .select("user1_id, user2_id")
-//           .eq("id", conversationId)
+//           .eq("id", memoizedConversationId)
 //           .single()
 
 //         if (!conversation) {
@@ -61,7 +62,7 @@
 //     }
 
 //     loadConversation()
-//   }, [conversationId, router])
+//   }, [memoizedConversationId, router])
 
 //   return (
 //     <div className="flex h-screen w-full gap-0">
@@ -75,7 +76,7 @@
 //           </div>
 //         ) : recipientData ? (
 //           <ChatWindow
-//             conversationId={conversationId}
+//             conversationId={memoizedConversationId}
 //             recipientId={recipientData.id}
 //             recipientName={recipientData.display_name}
 //             recipientAvatar={recipientData.profile_picture_url}
@@ -87,13 +88,11 @@
 // }
 
 
-
 "use client"
 
 import { useEffect, useState, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
-import { ChatSidebar } from "@/components/chat-sidebar"
 import { ChatWindow } from "@/components/chat-window"
 
 export default function ConversationPage() {
@@ -155,24 +154,19 @@ export default function ConversationPage() {
   }, [memoizedConversationId, router])
 
   return (
-    <div className="flex h-screen w-full gap-0">
-      <div className="w-1/4 max-w-xs border-r border-border">
-        <ChatSidebar />
-      </div>
-      <div className="flex-1">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-full bg-background">
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
-        ) : recipientData ? (
-          <ChatWindow
-            conversationId={memoizedConversationId}
-            recipientId={recipientData.id}
-            recipientName={recipientData.display_name}
-            recipientAvatar={recipientData.profile_picture_url}
-          />
-        ) : null}
-      </div>
-    </div>
+    <>
+      {isLoading ? (
+        <div className="flex items-center justify-center h-full bg-background">
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      ) : recipientData ? (
+        <ChatWindow
+          conversationId={memoizedConversationId}
+          recipientId={recipientData.id}
+          recipientName={recipientData.display_name}
+          recipientAvatar={recipientData.profile_picture_url}
+        />
+      ) : null}
+    </>
   )
 }

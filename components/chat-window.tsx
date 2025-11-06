@@ -553,7 +553,7 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 overflow-x-hidden">
         {messages.map((msg) => (
           <div
             key={msg.id}

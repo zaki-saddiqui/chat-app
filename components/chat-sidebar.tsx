@@ -53,9 +53,8 @@
 //             const isReceiver = message.receiver_id === user.id
 
 //             if (isReceiver) {
-//               // Restore conversation if it was deleted by current user
 //               const restored = await restoreConversationIfDeleted(message.conversation_id, user.id)
-//               if (restored || !chats.find((c) => c.conversationId === message.conversation_id)) {
+//               if (restored) {
 //                 fetchChats()
 //               }
 //             }
@@ -69,7 +68,7 @@
 //     }
 
 //     setupSubscription()
-//   }, [chats])
+//   }, [currentUserId])
 
 //   const fetchChats = useCallback(async () => {
 //     try {
@@ -168,6 +167,7 @@
 
 
 
+
 "use client"
 
 import { useState, useEffect, useCallback, memo } from "react"
@@ -187,9 +187,15 @@ interface ChatListItem {
   profilePicture?: string
   lastMessage?: string
   lastMessageTime?: string
+  deleted_by_user1?: boolean
+  deleted_by_user2?: boolean
 }
 
-export const ChatSidebar = memo(function ChatSidebar() {
+interface ChatSidebarProps {
+  onChatSelect?: () => void
+}
+
+export const ChatSidebar = memo(function ChatSidebar({ onChatSelect }: ChatSidebarProps) {
   const [chats, setChats] = useState<ChatListItem[]>([])
   const [isNewChatOpen, setIsNewChatOpen] = useState(false)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -209,7 +215,29 @@ export const ChatSidebar = memo(function ChatSidebar() {
 
       setCurrentUserId(user.id)
 
-      const channel = supabase
+      const conversationChannel = supabase
+        .channel(`conversations-${user.id}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "conversations",
+          },
+          (payload: any) => {
+            const conv = payload.new
+            const isUser1 = conv.user1_id === user.id
+            const isDeletedForThisUser = isUser1 ? conv.deleted_by_user1 : conv.deleted_by_user2
+
+            if (isDeletedForThisUser) {
+              // Remove from local state immediately if deleted
+              setChats((prev) => prev.filter((chat) => chat.conversationId !== conv.id))
+            }
+          },
+        )
+        .subscribe()
+
+      const messageChannel = supabase
         .channel(`messages-${user.id}`)
         .on(
           "postgres_changes",
@@ -233,7 +261,8 @@ export const ChatSidebar = memo(function ChatSidebar() {
         .subscribe()
 
       return () => {
-        supabase.removeChannel(channel)
+        supabase.removeChannel(conversationChannel)
+        supabase.removeChannel(messageChannel)
       }
     }
 
@@ -273,6 +302,8 @@ export const ChatSidebar = memo(function ChatSidebar() {
           profilePicture: otherUser?.profile_picture_url,
           lastMessage: lastMsg?.content?.substring(0, 40),
           lastMessageTime: lastMsg?.created_at,
+          deleted_by_user1: conv.deleted_by_user1,
+          deleted_by_user2: conv.deleted_by_user2,
         })
       }
 
@@ -310,7 +341,9 @@ export const ChatSidebar = memo(function ChatSidebar() {
           </div>
         ) : (
           chats.map((chat) => (
-            <ChatItem key={chat.conversationId} chat={chat} onDelete={() => handleChatDeleted(chat.conversationId)} />
+            <div key={chat.conversationId} onClick={onChatSelect}>
+              <ChatItem chat={chat} onDelete={() => handleChatDeleted(chat.conversationId)} />
+            </div>
           ))
         )}
       </div>

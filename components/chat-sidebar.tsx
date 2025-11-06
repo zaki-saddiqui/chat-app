@@ -378,17 +378,16 @@ export const ChatSidebar = memo(function ChatSidebar() {
 
       setChats(chatList)
     } catch (error) {
-      console.error("Error in fetchChats:", error)
+      console.error("[v0] Error in fetchChats:", error)
     }
   }, [])
 
-  const handleChatDeleted = useCallback(() => {
-    fetchChats()
-  }, [fetchChats])
-
-  const removeChat = useCallback((conversationId: string) => {
-    setChats((prevChats) => prevChats.filter((chat) => chat.conversationId !== conversationId))
-  }, [])
+  const handleChatDeleted = useCallback(
+    (conversationId: string) => {
+      setChats(chats.filter((chat) => chat.conversationId !== conversationId))
+    },
+    [chats],
+  )
 
   return (
     <div className="w-full h-full flex flex-col bg-background border-r border-border">
@@ -411,7 +410,7 @@ export const ChatSidebar = memo(function ChatSidebar() {
           </div>
         ) : (
           chats.map((chat) => (
-            <ChatItem key={chat.conversationId} chat={chat} onDelete={() => removeChat(chat.conversationId)} />
+            <ChatItem key={chat.conversationId} chat={chat} onDelete={() => handleChatDeleted(chat.conversationId)} />
           ))
         )}
       </div>

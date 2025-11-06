@@ -93,6 +93,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { ChatSidebar } from "@/components/chat-sidebar"
 import { ChatWindow } from "@/components/chat-window"
 
 export default function ConversationPage() {
@@ -117,14 +118,21 @@ export default function ConversationPage() {
       }
 
       try {
-        // Get conversation details
         const { data: conversation } = await supabase
           .from("conversations")
-          .select("user1_id, user2_id")
+          .select("user1_id, user2_id, deleted_by_user1, deleted_by_user2")
           .eq("id", memoizedConversationId)
           .single()
 
         if (!conversation) {
+          router.push("/chat")
+          return
+        }
+
+        const isUser1 = conversation.user1_id === currentUser.id
+        const isDeleted = isUser1 ? conversation.deleted_by_user1 : conversation.deleted_by_user2
+
+        if (isDeleted) {
           router.push("/chat")
           return
         }
@@ -154,19 +162,25 @@ export default function ConversationPage() {
   }, [memoizedConversationId, router])
 
   return (
-    <>
-      {isLoading ? (
-        <div className="flex items-center justify-center h-full bg-background">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
-      ) : recipientData ? (
-        <ChatWindow
-          conversationId={memoizedConversationId}
-          recipientId={recipientData.id}
-          recipientName={recipientData.display_name}
-          recipientAvatar={recipientData.profile_picture_url}
-        />
-      ) : null}
-    </>
+    <div className="flex h-screen w-full gap-0">
+      <div className="w-1/4 max-w-xs border-r border-border">
+        <ChatSidebar />
+      </div>
+      <div className="flex-1">
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full bg-background">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        ) : recipientData ? (
+          <ChatWindow
+            conversationId={memoizedConversationId}
+            recipientId={recipientData.id}
+            recipientName={recipientData.display_name}
+            recipientAvatar={recipientData.profile_picture_url}
+          />
+        ) : null}
+      </div>
+    </div>
   )
 }
+

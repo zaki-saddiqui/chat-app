@@ -568,7 +568,7 @@ export function ChatWindow({ conversationId, recipientId, recipientName, recipie
               }`}
             >
               {msg.message_type === "text" ? (
-                <p className="text-sm break-words">{msg.content}</p>
+                <p className="text-sm wrap-break-word">{msg.content}</p> 
               ) : msg.message_type === "image" ? (
                 <img src={msg.file_url || "/placeholder.svg"} alt="shared image" className="max-w-[200px] rounded-lg" />
               ) : (

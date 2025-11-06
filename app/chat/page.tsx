@@ -23,10 +23,10 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-screen w-full gap-0">
-      <div className="w-1/4 max-w-xs border-r border-border">
+      <div className="hidden md:flex md:w-1/4 md:max-w-xs border-r border-border flex-col">
         <ChatSidebar />
       </div>
-      <div className="flex-1 flex items-center justify-center bg-background text-muted-foreground">
+      <div className="w-full md:flex-1 flex items-center justify-center bg-background text-muted-foreground">
         <p>Select a chat to start messaging</p>
       </div>
     </div>
